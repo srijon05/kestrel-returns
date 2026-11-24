@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+# Kestrel data must not go to public repos (ops-policy s10). predictions.csv is deliberately NOT ignored.
+data/*.csv
+.venv/

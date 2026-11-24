@@ -1,0 +1,44 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kestrel – order return risk</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1a1d23;--mut:#5d6573;--line:#dde1e7;--hi:#b42318;--md:#b54708;--lo:#067647}
+@media(prefers-color-scheme:dark){:root{--bg:#14171c;--card:#1d2128;--ink:#eef0f3;--mut:#9aa3b0;--line:#313846;--hi:#f97066;--md:#fdb022;--lo:#47cd89}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+main{max-width:980px;margin:0 auto;padding:20px;display:grid;gap:16px;grid-template-columns:1fr 1fr}
+@media(max-width:800px){main{grid-template-columns:1fr}}
+h1{grid-column:1/-1;font-size:20px;margin:0}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0 2px}input,select{width:100%;padding:7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}button{margin-top:12px;padding:9px 14px;border:0;border-radius:6px;background:#1d4ed8;color:#fff;font-weight:600;cursor:pointer}
+button.alt{background:transparent;color:var(--ink);border:1px solid var(--line);margin-right:6px}
+.big{font-size:38px;font-weight:700}.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-weight:600;border:1px solid currentColor}
+.high{color:var(--hi)}.medium{color:var(--md)}.low{color:var(--lo)}ul{padding-left:18px;margin:6px 0}.mut{color:var(--mut)}.err{color:var(--hi)}
+</style></head><body><main>
+<h1>Order return-risk check <span class="mut" style="font-weight:400">· before dispatch</span></h1>
+<section class="card"><div><button class="alt" onclick="fill(0)">Example: risky COD</button><button class="alt" onclick="fill(1)">Example: safe prepaid</button></div>
+<div class="row"><div><label>Customer ID</label><input id="customer_id"></div><div><label>SKU</label><select id="sku"></select></div></div>
+<div class="row"><div><label>Channel</label><select id="sales_channel"><option>app</option><option>web</option><option>marketplace</option><option>partner_outlet</option></select></div>
+<div><label>Payment</label><select id="payment_mode"><option>prepaid_upi</option><option>prepaid_card</option><option>cod</option><option>emi</option></select></div></div>
+<div class="row"><div><label>Discount %</label><input id="discount_pct" type="number"></div><div><label>Qty</label><input id="qty" type="number"></div></div>
+<div class="row"><div><label>Order value (Rs)</label><input id="order_value_inr" type="number"></div><div><label>Promised delivery (days)</label><input id="promised_delivery_days" type="number"></div></div>
+<div class="row"><div><label>Customer prior orders</label><input id="customer_prior_orders" type="number"></div><div><label>Customer prior returns</label><input id="customer_prior_returns" type="number"></div></div>
+<div class="row"><div><label>Pincode (blank = none captured)</label><input id="delivery_pincode"></div><div><label>Gift?</label><select id="is_gift"><option>N</option><option>Y</option></select></div></div>
+<button onclick="go()">Check order</button></section>
+<section class="card" id="out"><span class="mut">Fill the form and press “Check order”.</span></section>
+<script>
+const F=["customer_id","sku","sales_channel","payment_mode","discount_pct","qty","order_value_inr","promised_delivery_days","customer_prior_orders","customer_prior_returns","delivery_pincode","is_gift"];
+const EX=[{customer_id:"KC100000",sku:"KH-RV-02",sales_channel:"marketplace",payment_mode:"cod",discount_pct:30,qty:1,order_value_inr:15399,promised_delivery_days:9,customer_prior_orders:3,customer_prior_returns:2,delivery_pincode:"440001",is_gift:"Y"},
+{customer_id:"KC100001",sku:"KH-IC-01",sales_channel:"app",payment_mode:"prepaid_upi",discount_pct:5,qty:1,order_value_inr:2279,promised_delivery_days:3,customer_prior_orders:2,customer_prior_returns:0,delivery_pincode:"560001",is_gift:"N"}];
+function fill(i){F.forEach(k=>document.getElementById(k).value=EX[i][k]);}
+fetch("/options").then(r=>r.json()).then(o=>{document.getElementById("sku").innerHTML=o.skus.map(s=>`<option value="${s.sku}">${s.sku} – ${s.model_name}</option>`).join("");fill(0)}).catch(()=>{});
+const esc=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+async function go(){const rec={};F.forEach(k=>rec[k]=document.getElementById(k).value);
+ const out=document.getElementById("out");out.textContent="Checking…";
+ try{const r=await fetch("/score",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(rec)});const d=await r.json();
+ if(!r.ok){out.innerHTML=`<div class="err">Could not score this order: ${esc(d.error)}</div>`;return}
+ const li=a=>a.length?"<ul>"+a.map(x=>`<li>${esc(x.reason)}</li>`).join("")+"</ul>":"<div class='mut'>None notable</div>";
+ out.innerHTML=`<div class="big ${d.risk_band}">${(d.return_probability*100).toFixed(0)}%</div><div>chance this order is returned · <span class="pill ${d.risk_band}">${d.risk_band} risk</span></div>
+ <p><b>${d.recommended_action==="SHIP"?"Ship as normal":"Confirmation call before dispatch"}</b><br><span class="mut">${esc(d.action_explanation)}</span></p>
+ <b>Why</b>${li(d.reasons)}<b>Working in its favour</b>${li(d.reassuring_factors)}
+ ${d.data_warnings.map(w=>`<p class="mut">⚠ ${esc(w)}</p>`).join("")}<p class="mut">Expected return cost on this order: Rs ${d.expected_cost_of_return_inr}</p>`}
+ catch(e){out.innerHTML=`<div class="err">Service not reachable. Is the server running?</div>`}}
+</script></main></body></html>

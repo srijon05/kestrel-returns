@@ -1,0 +1,33 @@
+{
+  "call_prevent_20pct": {
+    "break_even_prob": 0.196,
+    "orders_called": 333,
+    "pct_called": 15.7,
+    "returns_in_called": 116,
+    "net_inr_per_quarter": 11695,
+    "call_all_net": -39320
+  },
+  "call_prevent_35pct": {
+    "break_even_prob": 0.112,
+    "orders_called": 685,
+    "pct_called": 32.2,
+    "returns_in_called": 166,
+    "net_inr_per_quarter": 35990,
+    "call_all_net": 2942
+  },
+  "call_35_net_95ci": [
+    26242,
+    45649
+  ],
+  "hold_p>=0.30_margin_0pct": 11316,
+  "hold_p>=0.30_margin_10pct": -4955,
+  "hold_p>=0.30_margin_20pct": -21226,
+  "hold_p>=0.30_margin_30pct": -37497,
+  "hold_p>=0.30_orders": 175,
+  "hold_precision": 0.469,
+  "accuracy_if_flagging_p>=0.5": 0.8923,
+  "accuracy_if_flagging_p>=0.3": 0.8796,
+  "accuracy_if_flagging_p>=0.112": 0.7187,
+  "accuracy_flag_nothing": 0.8848,
+  "shield_called_share": 0.41
+}
